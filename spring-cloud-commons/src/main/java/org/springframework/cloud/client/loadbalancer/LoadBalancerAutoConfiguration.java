@@ -40,7 +40,8 @@ import org.springframework.retry.support.RetryTemplate;
 import org.springframework.web.client.RestTemplate;
 
 /**
- * Auto-configuration for blocking client-side load balancing.
+ * Auto-configuration for blocking client-side load balancing. 这个组件在META=INF/spring.factory中
+ * 会在springboot 项目 启动的时候创建
  *
  * @author Spencer Gibb
  * @author Dave Syer
@@ -61,9 +62,31 @@ public class LoadBalancerAutoConfiguration {
 	@Autowired(required = false)
 	private List<LoadBalancerRequestTransformer> transformers = Collections.emptyList();
 
+	/**
+	 * 申明的这个bean实现了 SmartInitializingSingleton 这个接口
+	 * 在SpringBean的生命周期中 当所有Bean都实例化完成之后调用
+	 * 在这里会获得所有的RestTemplateCustomizer RestTemplate的定制器，
+	 * 对容器中的所有的 RestTemplate进行定制 这里的定制器就是上面创建的定制器
+	 * 是会对restTemplate增加负载均衡的拦截器添加进去
+	 *
+	 * @param restTemplateCustomizers
+	 * @return
+	 */
 	@Bean
 	public SmartInitializingSingleton loadBalancedRestTemplateInitializerDeprecated(
 			final ObjectProvider<List<RestTemplateCustomizer>> restTemplateCustomizers) {
+		//这是一个匿名的类 这是不用 lambda之前的代码
+//		List<RestTemplateCustomizer> available = restTemplateCustomizers.getIfAvailable();
+//		new SmartInitializingSingleton() {
+//			@Override
+//			public void afterSingletonsInstantiated() {
+//				for (RestTemplate restTemplate : LoadBalancerAutoConfiguration.this.restTemplates) {
+//					for (RestTemplateCustomizer customizer :available) {
+//						customizer.customize(restTemplate);
+//					}
+//				}
+//			}
+//		};
 		return () -> restTemplateCustomizers.ifAvailable(customizers -> {
 			for (RestTemplate restTemplate : LoadBalancerAutoConfiguration.this.restTemplates) {
 				for (RestTemplateCustomizer customizer : customizers) {
@@ -75,7 +98,8 @@ public class LoadBalancerAutoConfiguration {
 
 	@Bean
 	@ConditionalOnMissingBean
-	public LoadBalancerRequestFactory loadBalancerRequestFactory(LoadBalancerClient loadBalancerClient) {
+	public LoadBalancerRequestFactory loadBalancerRequestFactory(
+			LoadBalancerClient loadBalancerClient) {
 		return new LoadBalancerRequestFactory(loadBalancerClient, this.transformers);
 	}
 
@@ -83,19 +107,45 @@ public class LoadBalancerAutoConfiguration {
 	@Conditional(RetryMissingOrDisabledCondition.class)
 	static class LoadBalancerInterceptorConfig {
 
+		/**
+		 * 增加负载均衡的拦截器组件 让下面的restTemplate的定制器组件使用
+		 * @param loadBalancerClient
+		 * @param requestFactory
+		 * @return
+		 */
 		@Bean
-		public LoadBalancerInterceptor loadBalancerInterceptor(LoadBalancerClient loadBalancerClient,
+		public LoadBalancerInterceptor loadBalancerInterceptor(
+				LoadBalancerClient loadBalancerClient,
 				LoadBalancerRequestFactory requestFactory) {
 			return new LoadBalancerInterceptor(loadBalancerClient, requestFactory);
 		}
 
+		/**
+		 * 增加一个RestTemplate的定制器组件
+		 * @param loadBalancerInterceptor
+		 * @return
+		 */
 		@Bean
 		@ConditionalOnMissingBean
-		public RestTemplateCustomizer restTemplateCustomizer(final LoadBalancerInterceptor loadBalancerInterceptor) {
-			return restTemplate -> {
-				List<ClientHttpRequestInterceptor> list = new ArrayList<>(restTemplate.getInterceptors());
-				list.add(loadBalancerInterceptor);
-				restTemplate.setInterceptors(list);
+		public RestTemplateCustomizer restTemplateCustomizer(
+				final LoadBalancerInterceptor loadBalancerInterceptor) {
+//			return restTemplate -> {
+//				List<ClientHttpRequestInterceptor> list = new ArrayList<>(restTemplate.getInterceptors());
+//				list.add(loadBalancerInterceptor);
+//				restTemplate.setInterceptors(list);
+//			};
+			/**
+			 * lambda表达式一下没看懂 改成原来的方式写一下
+			 * 就是将外部传入RestTemplate 增加一个负载均衡的拦截器
+			 */
+			return new RestTemplateCustomizer() {
+				@Override
+				public void customize(RestTemplate restTemplate) {
+					List<ClientHttpRequestInterceptor> list = new ArrayList<>(
+							restTemplate.getInterceptors());
+					list.add(loadBalancerInterceptor);
+					restTemplate.setInterceptors(list);
+				}
 			};
 		}
 
@@ -146,7 +196,8 @@ public class LoadBalancerAutoConfiguration {
 
 		@Bean
 		@ConditionalOnMissingBean
-		public RetryLoadBalancerInterceptor loadBalancerInterceptor(LoadBalancerClient loadBalancerClient,
+		public RetryLoadBalancerInterceptor loadBalancerInterceptor(
+				LoadBalancerClient loadBalancerClient,
 				LoadBalancerProperties properties, LoadBalancerRequestFactory requestFactory,
 				LoadBalancedRetryFactory loadBalancedRetryFactory,
 				ReactiveLoadBalancer.Factory<ServiceInstance> loadBalancerFactory) {
@@ -159,7 +210,8 @@ public class LoadBalancerAutoConfiguration {
 		public RestTemplateCustomizer restTemplateCustomizer(
 				final RetryLoadBalancerInterceptor loadBalancerInterceptor) {
 			return restTemplate -> {
-				List<ClientHttpRequestInterceptor> list = new ArrayList<>(restTemplate.getInterceptors());
+				List<ClientHttpRequestInterceptor> list = new ArrayList<>(
+						restTemplate.getInterceptors());
 				list.add(loadBalancerInterceptor);
 				restTemplate.setInterceptors(list);
 			};
