@@ -83,6 +83,7 @@ public abstract class AbstractAutoServiceRegistration<R extends Registration>
 	@Override
 	@SuppressWarnings("deprecation")
 	public void onApplicationEvent(WebServerInitializedEvent event) {
+		//事件触发
 		bind(event);
 	}
 
@@ -95,6 +96,7 @@ public abstract class AbstractAutoServiceRegistration<R extends Registration>
 			}
 		}
 		this.port.compareAndSet(0, event.getWebServer().getPort());
+		//开始
 		this.start();
 	}
 
@@ -129,11 +131,14 @@ public abstract class AbstractAutoServiceRegistration<R extends Registration>
 		// only initialize if nonSecurePort is greater than 0 and it isn't already running
 		// because of containerPortInitializer below
 		if (!this.running.get()) {
+			//发布注册前事件
 			this.context.publishEvent(new InstancePreRegisteredEvent(this, getRegistration()));
+			//注册
 			register();
 			if (shouldRegisterManagement()) {
 				registerManagement();
 			}
+			//发布注册后时间
 			this.context.publishEvent(new InstanceRegisteredEvent<>(this, getConfiguration()));
 			this.running.compareAndSet(false, true);
 		}

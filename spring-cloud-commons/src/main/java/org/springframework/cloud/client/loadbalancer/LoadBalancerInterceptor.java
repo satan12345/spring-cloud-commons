@@ -37,7 +37,8 @@ public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 
 	private LoadBalancerRequestFactory requestFactory;
 
-	public LoadBalancerInterceptor(LoadBalancerClient loadBalancer, LoadBalancerRequestFactory requestFactory) {
+	public LoadBalancerInterceptor(LoadBalancerClient loadBalancer,
+			LoadBalancerRequestFactory requestFactory) {
 		this.loadBalancer = loadBalancer;
 		this.requestFactory = requestFactory;
 	}
@@ -50,7 +51,9 @@ public class LoadBalancerInterceptor implements ClientHttpRequestInterceptor {
 	@Override
 	public ClientHttpResponse intercept(final HttpRequest request, final byte[] body,
 			final ClientHttpRequestExecution execution) throws IOException {
+		//获取请求的url
 		final URI originalUri = request.getURI();
+		//提取服务名
 		String serviceName = originalUri.getHost();
 		Assert.state(serviceName != null, "Request URI does not contain a valid hostname: " + originalUri);
 		return this.loadBalancer.execute(serviceName, this.requestFactory.createRequest(request, body, execution));

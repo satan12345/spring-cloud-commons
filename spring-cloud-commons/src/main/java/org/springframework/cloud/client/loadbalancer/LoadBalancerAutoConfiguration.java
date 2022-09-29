@@ -75,6 +75,8 @@ public class LoadBalancerAutoConfiguration {
 	@Bean
 	public SmartInitializingSingleton loadBalancedRestTemplateInitializerDeprecated(
 			final ObjectProvider<List<RestTemplateCustomizer>> restTemplateCustomizers) {
+
+		//获取可用的定制器 对获取到的RestTemplate进行定制
 		//这是一个匿名的类 这是不用 lambda之前的代码
 //		List<RestTemplateCustomizer> available = restTemplateCustomizers.getIfAvailable();
 //		new SmartInitializingSingleton() {
@@ -129,10 +131,13 @@ public class LoadBalancerAutoConfiguration {
 		@ConditionalOnMissingBean
 		public RestTemplateCustomizer restTemplateCustomizer(
 				final LoadBalancerInterceptor loadBalancerInterceptor) {
-//			return restTemplate -> {
-//				List<ClientHttpRequestInterceptor> list = new ArrayList<>(restTemplate.getInterceptors());
-//				list.add(loadBalancerInterceptor);
-//				restTemplate.setInterceptors(list);
+//			//创建restTemplate的定制器
+//				设置对restTemplate的定制方法（向restTemplate拦截器中添加上面创建的拦截器）
+//			new RestTemplateCustomizer() {
+//				@Override
+//				public void customize(RestTemplate restTemplate) {
+//					restTemplate.getInterceptors().add(loadBalancerInterceptor);
+//				}
 //			};
 			/**
 			 * lambda表达式一下没看懂 改成原来的方式写一下
@@ -194,6 +199,15 @@ public class LoadBalancerAutoConfiguration {
 	@ConditionalOnProperty(value = "spring.cloud.loadbalancer.retry.enabled", matchIfMissing = true)
 	public static class RetryInterceptorAutoConfiguration {
 
+		/**
+		 * lb的拦截器
+		 * @param loadBalancerClient
+		 * @param properties
+		 * @param requestFactory
+		 * @param loadBalancedRetryFactory
+		 * @param loadBalancerFactory
+		 * @return
+		 */
 		@Bean
 		@ConditionalOnMissingBean
 		public RetryLoadBalancerInterceptor loadBalancerInterceptor(
@@ -205,10 +219,23 @@ public class LoadBalancerAutoConfiguration {
 					loadBalancedRetryFactory, loadBalancerFactory);
 		}
 
+		/**
+		 * RestTemplate的定制器
+		 * @param loadBalancerInterceptor
+		 * @return
+		 */
 		@Bean
 		@ConditionalOnMissingBean
 		public RestTemplateCustomizer restTemplateCustomizer(
 				final RetryLoadBalancerInterceptor loadBalancerInterceptor) {
+//			//创建restTemplate的定制器
+//				设置对restTemplate的定制方法（向restTemplate拦截器中添加上面创建的拦截器）
+//			new RestTemplateCustomizer() {
+//				@Override
+//				public void customize(RestTemplate restTemplate) {
+//					restTemplate.getInterceptors().add(loadBalancerInterceptor);
+//				}
+//			};
 			return restTemplate -> {
 				List<ClientHttpRequestInterceptor> list = new ArrayList<>(
 						restTemplate.getInterceptors());
